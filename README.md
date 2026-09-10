@@ -12,7 +12,7 @@
 
 ---
 
-## ⚡ 2-Minute Overview
+## ⚡ 2-Minute Product Overview
 **LogiRoute** is a production-grade full-stack fleet logistics management platform designed to track delivery fleets, ingest high-throughput GPS telemetry, enforce geofence compliance, and manage end-to-end parcel consignment lifecycles across Tallinn's urban corridors.
 
 ### Core Capabilities

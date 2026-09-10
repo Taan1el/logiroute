@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-Standard web mapping libraries (Mapbox GL, Leaflet, Google Maps) require heavy external CDN scripts, WebGL canvas bindings, and proprietary API keys. In enterprise evaluations, engineers want instant, zero-friction verification without registering third-party billing keys or experiencing CSP blocking.
+Standard web mapping libraries (Mapbox GL, Leaflet, Google Maps) require heavy external CDN scripts, WebGL canvas bindings, and proprietary API keys. Dispatch operators and engineers need instant, zero-friction verification without registering third-party billing keys or experiencing CSP blocking.
 
 Furthermore, dispatch operators need seamless visual correlation between active vehicle coordinates, geofence perimeters, and assigned consignment delivery trajectories.
 
