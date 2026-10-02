@@ -12,7 +12,21 @@ import {
 
 const API_BASE = '/api';
 
-export const api = {
+/** The calls the console makes. The HTTP client and the in-browser demo store both implement it. */
+export interface Backend {
+  getVehicles(): Promise<Vehicle[]>;
+  updateVehicleStatus(id: string, status: VehicleStatus): Promise<Vehicle>;
+  getGeofences(): Promise<Geofence[]>;
+  getDeliveries(status?: DeliveryStatus): Promise<Delivery[]>;
+  createDelivery(data: CreateDeliveryDto): Promise<Delivery>;
+  updateDeliveryStatus(id: string, status: DeliveryStatus): Promise<Delivery>;
+  assignVehicle(deliveryId: string, vehicleId: string): Promise<Delivery>;
+  ingestTelemetry(data: IngestTelemetryDto): Promise<{ vehicle: Vehicle; triggeredAlerts: AlertEvent[] }>;
+  getAlerts(limit?: number): Promise<AlertEvent[]>;
+  getMetrics(): Promise<FleetMetrics>;
+}
+
+export const httpApi = {
   async getHealth(): Promise<{ status: string; timestamp: string }> {
     const res = await fetch(`${API_BASE}/health`);
     return res.json();
@@ -119,8 +133,8 @@ export const api = {
         total_vehicles: 0,
         active_en_route: 0,
         active_deliveries: 0,
-        completed_today: 0,
-        open_alerts: 0,
+        completed_24h: 0,
+        alerts_24h: 0,
         avg_battery_percent: 0,
       }
     );
