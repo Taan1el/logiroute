@@ -1,19 +1,16 @@
 services:
   logiroute:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: logiroute-app
+    build: .
     ports:
       - "4000:4000"
     environment:
-      - PORT=4000
-      - NODE_ENV=production
+      PORT: "4000"
+      DATABASE_URL: /data/logiroute.db
     volumes:
-      - logiroute-data:/app/server/data
+      - logiroute-data:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:4000/api/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/api/health"]
       interval: 15s
       timeout: 5s
       retries: 3

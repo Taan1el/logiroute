@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Fleet Logistics, Real-time Geofence Alerts & Telemetry Platform",
+  "description": "Dispatch console for planning delivery routes and following vehicle and stop status",
   "workspaces": [
     "server",
     "client"
@@ -20,9 +20,23 @@
     "test": "npm run test:server && npm run test:client",
     "lint:server": "npm run lint --workspace=server",
     "lint:client": "npm run lint --workspace=client",
-    "lint": "npm run lint:server && npm run lint:client"
+    "lint": "npm run lint:server && npm run lint:client",
+    "build:pages": "npm run build:pages --workspace=client"
   },
   "devDependencies": {
     "typescript": "^5.8.2"
+  },
+  "license": "MIT",
+  "author": "Taaniel Vananurm",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Taan1el/logiroute.git"
+  },
+  "homepage": "https://taan1el.github.io/logiroute/",
+  "bugs": {
+    "url": "https://github.com/Taan1el/logiroute/issues"
+  },
+  "engines": {
+    "node": ">=22.13"
   }
 }
