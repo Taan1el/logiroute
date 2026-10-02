@@ -92,7 +92,7 @@ describe('LogiRoute Fleet API & Telemetry Engine', () => {
 
     it('updates vehicle operational status', async () => {
       const listRes = await request(app).get('/api/vehicles');
-      const firstVeh = listRes.body.data[0];
+      const firstVeh = listRes.body.data.find((v: any) => v.plate_number === 'TLN-803');
 
       const patchRes = await request(app)
         .patch(`/api/vehicles/${firstVeh.id}/status`)
@@ -260,6 +260,11 @@ describe('LogiRoute Fleet API & Telemetry Engine', () => {
       const delList = await request(app).get('/api/deliveries');
       const inTransitDel = delList.body.data.find((d: any) => d.status === 'in_transit');
 
+      const arrivedRes = await request(app)
+        .patch(`/api/deliveries/${inTransitDel.id}/status`)
+        .send({ status: 'arrived_at_hub' });
+      expect(arrivedRes.status).toBe(200);
+
       const updateRes = await request(app)
         .patch(`/api/deliveries/${inTransitDel.id}/status`)
         .send({ status: 'completed' });
@@ -283,6 +288,8 @@ describe('LogiRoute Fleet API & Telemetry Engine', () => {
       expect(res.body.data).toHaveProperty('active_en_route');
       expect(res.body.data).toHaveProperty('active_deliveries');
       expect(res.body.data).toHaveProperty('avg_battery_percent');
+      expect(res.body.data).toHaveProperty('alerts_24h');
+      expect(res.body.data).toHaveProperty('completed_24h');
       expect(res.body.data.total_vehicles).toBeGreaterThanOrEqual(4);
     });
 

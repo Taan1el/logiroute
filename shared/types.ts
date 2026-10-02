@@ -67,8 +67,8 @@ export interface FleetMetrics {
   total_vehicles: number;
   active_en_route: number;
   active_deliveries: number;
-  completed_today: number;
-  open_alerts: number;
+  completed_24h: number;
+  alerts_24h: number;
   avg_battery_percent: number;
 }
 

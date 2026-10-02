@@ -36,7 +36,7 @@ export class VehicleController {
       const updated = this.fleetService.updateVehicleStatus(req.params.id, status);
       res.json({ success: true, data: updated });
     } catch (err: any) {
-      res.status(404).json({ success: false, error: err.message });
+      res.status(String(err.message).startsWith('Vehicle not found') ? 404 : 400).json({ success: false, error: err.message });
     }
   };
 }

@@ -1,13 +1,16 @@
 import { VehicleRepository } from '../repositories/vehicle.repository.js';
 import { GeofenceRepository } from '../repositories/geofence.repository.js';
 import { AlertRepository } from '../repositories/alert.repository.js';
+import { DeliveryRepository } from '../repositories/delivery.repository.js';
+import { computeMetrics, DAY_MS, validateGeofenceInput } from '../../../shared/rules.js';
 import { Geofence, Vehicle, VehicleStatus, AlertEvent, FleetMetrics } from '../../../shared/types.js';
 
 export class FleetService {
   constructor(
     private vehicleRepo: VehicleRepository,
     private geofenceRepo: GeofenceRepository,
-    private alertRepo: AlertRepository
+    private alertRepo: AlertRepository,
+    private deliveryRepo: DeliveryRepository
   ) {}
 
   listVehicles(): Vehicle[] {
@@ -22,6 +25,12 @@ export class FleetService {
     const vehicle = this.vehicleRepo.getVehicleById(id);
     if (!vehicle) {
       throw new Error(`Vehicle not found: ${id}`);
+    }
+    const hasActive = this.deliveryRepo
+      .listDeliveries()
+      .some((d) => d.vehicle_id === id && (d.status === 'dispatched' || d.status === 'in_transit'));
+    if (hasActive && status !== 'en_route') {
+      throw new Error(`Vehicle ${vehicle.plate_number} has active deliveries and must stay en route`);
     }
     this.vehicleRepo.updateStatus(id, status);
     return this.vehicleRepo.getVehicleById(id)!;
@@ -40,14 +49,24 @@ export class FleetService {
     alert_on_exit?: boolean;
     color?: string;
   }): Geofence {
-    return this.geofenceRepo.createGeofence(dto);
+    const invalid = validateGeofenceInput(dto as unknown as Record<string, unknown>);
+    if (invalid) {
+      throw new Error(invalid);
+    }
+    return this.geofenceRepo.createGeofence({ ...dto, name: dto.name.trim() });
   }
 
   listAlerts(limit?: number): AlertEvent[] {
     return this.alertRepo.listAlerts(limit);
   }
 
-  getMetrics(): FleetMetrics {
-    return this.alertRepo.getMetrics();
+  getMetrics(now = new Date()): FleetMetrics {
+    const since = new Date(now.getTime() - DAY_MS).toISOString();
+    return computeMetrics(
+      this.vehicleRepo.listVehicles(),
+      this.deliveryRepo.listDeliveries(),
+      this.alertRepo.listSince(since),
+      now
+    );
   }
 }

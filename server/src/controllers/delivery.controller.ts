@@ -11,7 +11,7 @@ export class DeliveryController {
       const deliveries = this.deliveryService.listDeliveries(status);
       res.json({ success: true, data: deliveries });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(400).json({ success: false, error: err.message });
     }
   };
 
@@ -47,7 +47,7 @@ export class DeliveryController {
       const updated = this.deliveryService.updateDeliveryStatus(req.params.id, status);
       res.json({ success: true, data: updated });
     } catch (err: any) {
-      res.status(400).json({ success: false, error: err.message });
+      res.status(String(err.message).startsWith('Delivery not found') ? 404 : 400).json({ success: false, error: err.message });
     }
   };
 
@@ -61,7 +61,7 @@ export class DeliveryController {
       const updated = this.deliveryService.assignVehicle(req.params.id, vehicle_id);
       res.json({ success: true, data: updated });
     } catch (err: any) {
-      res.status(400).json({ success: false, error: err.message });
+      res.status(String(err.message).startsWith('Delivery not found') ? 404 : 400).json({ success: false, error: err.message });
     }
   };
 }

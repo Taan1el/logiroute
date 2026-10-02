@@ -10,32 +10,27 @@ export class TelemetryController {
 
   ingest = (req: Request, res: Response): void => {
     try {
-      const { vehicle_id, lat, lng } = req.body;
-      if (!vehicle_id || lat === undefined || lng === undefined) {
-        res.status(400).json({ success: false, error: 'vehicle_id, lat, and lng are required' });
-        return;
-      }
-
+      const body = req.body ?? {};
       const result = this.telemetryService.ingest({
-        vehicle_id,
-        lat: Number(lat),
-        lng: Number(lng),
-        speed_kmh: req.body.speed_kmh !== undefined ? Number(req.body.speed_kmh) : undefined,
-        battery_percent: req.body.battery_percent !== undefined ? Number(req.body.battery_percent) : undefined,
-        heading_deg: req.body.heading_deg !== undefined ? Number(req.body.heading_deg) : undefined,
+        vehicle_id: body.vehicle_id,
+        lat: body.lat,
+        lng: body.lng,
+        speed_kmh: body.speed_kmh,
+        battery_percent: body.battery_percent,
+        heading_deg: body.heading_deg,
       });
-
       res.json({ success: true, data: result });
     } catch (err: any) {
-      res.status(400).json({ success: false, error: err.message });
+      const status = String(err.message).startsWith('Vehicle not found') ? 404 : 400;
+      res.status(status).json({ success: false, error: err.message });
     }
   };
 
   listAlerts = (req: Request, res: Response): void => {
     try {
-      const limit = req.query.limit ? Number(req.query.limit) : 50;
-      const alerts = this.fleetService.listAlerts(limit);
-      res.json({ success: true, data: alerts });
+      const requested = Number(req.query.limit);
+      const limit = Number.isInteger(requested) && requested > 0 ? Math.min(requested, 500) : 50;
+      res.json({ success: true, data: this.fleetService.listAlerts(limit) });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -43,8 +38,7 @@ export class TelemetryController {
 
   getMetrics = (_req: Request, res: Response): void => {
     try {
-      const metrics = this.fleetService.getMetrics();
-      res.json({ success: true, data: metrics });
+      res.json({ success: true, data: this.fleetService.getMetrics() });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }

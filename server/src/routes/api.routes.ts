@@ -26,7 +26,7 @@ export function createApiRouter(db: DatabaseSync): Router {
   const geoService = new GeoService();
   const telemetryService = new TelemetryService(vehicleRepo, geofenceRepo, alertRepo, deliveryRepo, geoService);
   const deliveryService = new DeliveryService(deliveryRepo, vehicleRepo, geoService);
-  const fleetService = new FleetService(vehicleRepo, geofenceRepo, alertRepo);
+  const fleetService = new FleetService(vehicleRepo, geofenceRepo, alertRepo, deliveryRepo);
 
   // Controllers
   const vehicleController = new VehicleController(fleetService);

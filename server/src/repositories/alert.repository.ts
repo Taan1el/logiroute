@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import crypto from 'node:crypto';
-import { AlertEvent, AlertType, AlertSeverity, FleetMetrics } from '../../../shared/types.js';
+import { AlertEvent, AlertType, AlertSeverity } from '../../../shared/types.js';
 
 export class AlertRepository {
   constructor(private db: DatabaseSync) {}
@@ -79,31 +79,7 @@ export class AlertRepository {
     stmt.run(id, data.vehicle_id, data.lat, data.lng, data.speed_kmh, data.battery_percent, data.heading_deg, nowIso);
   }
 
-  getMetrics(): FleetMetrics {
-    const totalVehiclesRow = this.db.prepare('SELECT COUNT(*) as count FROM vehicles;').get() as any;
-    const activeVehiclesRow = this.db
-      .prepare("SELECT COUNT(*) as count FROM vehicles WHERE status = 'en_route';")
-      .get() as any;
-    const activeDeliveriesRow = this.db
-      .prepare("SELECT COUNT(*) as count FROM deliveries WHERE status IN ('dispatched', 'in_transit');")
-      .get() as any;
-    const completedTodayRow = this.db
-      .prepare("SELECT COUNT(*) as count FROM deliveries WHERE status = 'completed';")
-      .get() as any;
-    const openAlertsRow = this.db
-      .prepare("SELECT COUNT(*) as count FROM alert_events WHERE created_at >= datetime('now', '-1 day');")
-      .get() as any;
-    const avgBatteryRow = this.db
-      .prepare('SELECT ROUND(AVG(battery_percent), 1) as avg_bat FROM vehicles;')
-      .get() as any;
-
-    return {
-      total_vehicles: Number(totalVehiclesRow?.count || 0),
-      active_en_route: Number(activeVehiclesRow?.count || 0),
-      active_deliveries: Number(activeDeliveriesRow?.count || 0),
-      completed_today: Number(completedTodayRow?.count || 0),
-      open_alerts: Number(openAlertsRow?.count || 0),
-      avg_battery_percent: Number(avgBatteryRow?.avg_bat || 0),
-    };
+  listSince(sinceIso: string): AlertEvent[] {
+    return this.listAlerts(100000).filter((a) => a.created_at >= sinceIso);
   }
 }

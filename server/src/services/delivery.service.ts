@@ -2,6 +2,13 @@ import crypto from 'node:crypto';
 import { DeliveryRepository } from '../repositories/delivery.repository.js';
 import { VehicleRepository } from '../repositories/vehicle.repository.js';
 import { GeoService } from './geo.service.js';
+import {
+  checkTransition,
+  DEFAULT_PICKUP,
+  initialEtaMinutes,
+  isDeliveryStatus,
+  validateDeliveryInput,
+} from '../../../shared/rules.js';
 import { CreateDeliveryDto, Delivery, DeliveryStatus } from '../../../shared/types.js';
 
 export class DeliveryService {
@@ -12,6 +19,9 @@ export class DeliveryService {
   ) {}
 
   listDeliveries(status?: DeliveryStatus): Delivery[] {
+    if (status !== undefined && !isDeliveryStatus(status)) {
+      throw new Error(`Unknown delivery status: ${String(status)}`);
+    }
     return this.deliveryRepo.listDeliveries(status);
   }
 
@@ -20,45 +30,30 @@ export class DeliveryService {
   }
 
   createDelivery(dto: CreateDeliveryDto): Delivery {
-    if (!dto || typeof dto !== 'object' || Array.isArray(dto)) {
-      throw new Error('Delivery must be an object');
+    const invalid = validateDeliveryInput(dto);
+    if (invalid) {
+      throw new Error(invalid);
     }
-    if (typeof dto.destination_address !== 'string' || !dto.destination_address.trim()) {
-      throw new Error('Destination address must be a non-empty string');
-    }
-    for (const field of ['pickup_lat', 'pickup_lng', 'dropoff_lat', 'dropoff_lng'] as const) {
-      const value = dto[field];
-      if (field.startsWith('pickup') && value === undefined) continue;
-      const limit = field.endsWith('lat') ? 90 : 180;
-      if (typeof value !== 'number' || !Number.isFinite(value) || value < -limit || value > limit) {
-        throw new Error(`${field} must be a finite number between ${-limit} and ${limit}`);
-      }
+    if (dto.vehicle_id !== undefined) {
+      this.requireAssignableVehicle(dto.vehicle_id);
     }
 
-    // Default pickup location: Vabaduse Hub Tallinn
-    const pickupLat = dto.pickup_lat ?? 59.4335;
-    const pickupLng = dto.pickup_lng ?? 24.745;
-    const dropoffLat = dto.dropoff_lat;
-    const dropoffLng = dto.dropoff_lng;
-
+    const pickupLat = dto.pickup_lat ?? DEFAULT_PICKUP.lat;
+    const pickupLng = dto.pickup_lng ?? DEFAULT_PICKUP.lng;
     const distanceKm = this.geoService.haversineDistanceKm(
       { lat: pickupLat, lng: pickupLng },
-      { lat: dropoffLat, lng: dropoffLng }
+      { lat: dto.dropoff_lat, lng: dto.dropoff_lng }
     );
 
-    // Initial ETA estimate (30 km/h urban speed + 5 min dispatch buffer)
-    const etaMinutes = Math.max(5, Math.round((distanceKm / 30) * 60) + 5);
-    const trackingCode = `LR-TLN-${Math.floor(100000 + Math.random() * 900000)}`;
-
     const delivery = this.deliveryRepo.createDelivery({
-      tracking_code: trackingCode,
+      tracking_code: this.newTrackingCode(),
       pickup_lat: pickupLat,
       pickup_lng: pickupLng,
-      dropoff_lat: dropoffLat,
-      dropoff_lng: dropoffLng,
+      dropoff_lat: dto.dropoff_lat,
+      dropoff_lng: dto.dropoff_lng,
       destination_address: dto.destination_address.trim(),
       distance_km: distanceKm,
-      eta_minutes: etaMinutes,
+      eta_minutes: initialEtaMinutes(distanceKm),
       vehicle_id: dto.vehicle_id ?? null,
       status: dto.vehicle_id ? 'dispatched' : 'pending',
     });
@@ -66,31 +61,33 @@ export class DeliveryService {
     if (dto.vehicle_id) {
       this.vehicleRepo.updateStatus(dto.vehicle_id, 'en_route');
     }
-
     return delivery;
   }
 
   updateDeliveryStatus(id: string, status: DeliveryStatus): Delivery {
+    if (!isDeliveryStatus(status)) {
+      throw new Error(`Unknown delivery status: ${String(status)}`);
+    }
     const delivery = this.deliveryRepo.getDeliveryById(id);
     if (!delivery) {
       throw new Error(`Delivery not found: ${id}`);
     }
-
-    this.deliveryRepo.updateStatus(id, status);
-
-    // If completed or pending, check if assigned vehicle has active deliveries
-    if (status === 'completed' && delivery.vehicle_id) {
-      const remaining = this.deliveryRepo
-        .listDeliveries()
-        .filter((d) => d.vehicle_id === delivery.vehicle_id && d.id !== id && d.status !== 'completed');
-
-      if (remaining.length === 0) {
-        this.vehicleRepo.updateStatus(delivery.vehicle_id, 'idle');
-      }
-    } else if ((status === 'dispatched' || status === 'in_transit') && delivery.vehicle_id) {
-      this.vehicleRepo.updateStatus(delivery.vehicle_id, 'en_route');
+    const blocked = checkTransition(delivery, status);
+    if (blocked) {
+      throw new Error(blocked);
     }
 
+    const finished = status === 'arrived_at_hub' || status === 'completed';
+    this.deliveryRepo.updateStatus(id, status, finished ? 0 : undefined);
+
+    if (status === 'completed' && delivery.vehicle_id) {
+      const stillBusy = this.deliveryRepo
+        .listDeliveries()
+        .some((d) => d.vehicle_id === delivery.vehicle_id && d.id !== id && d.status !== 'completed');
+      if (!stillBusy) {
+        this.vehicleRepo.updateStatus(delivery.vehicle_id, 'idle');
+      }
+    }
     return this.deliveryRepo.getDeliveryById(id)!;
   }
 
@@ -99,19 +96,34 @@ export class DeliveryService {
     if (!delivery) {
       throw new Error(`Delivery not found: ${id}`);
     }
+    if (delivery.status !== 'pending') {
+      throw new Error(`Only pending deliveries can be assigned, this one is ${delivery.status}`);
+    }
+    this.requireAssignableVehicle(vehicleId);
 
+    this.deliveryRepo.assignVehicle(id, vehicleId);
+    this.vehicleRepo.updateStatus(vehicleId, 'en_route');
+    this.deliveryRepo.updateStatus(id, 'dispatched');
+    return this.deliveryRepo.getDeliveryById(id)!;
+  }
+
+  private requireAssignableVehicle(vehicleId: unknown): void {
+    if (typeof vehicleId !== 'string') {
+      throw new Error('vehicle_id must be a string');
+    }
     const vehicle = this.vehicleRepo.getVehicleById(vehicleId);
     if (!vehicle) {
       throw new Error(`Vehicle not found: ${vehicleId}`);
     }
-
-    this.deliveryRepo.assignVehicle(id, vehicleId);
-    this.vehicleRepo.updateStatus(vehicleId, 'en_route');
-
-    if (delivery.status === 'pending') {
-      this.deliveryRepo.updateStatus(id, 'dispatched');
+    if (vehicle.status === 'maintenance') {
+      throw new Error(`Vehicle ${vehicle.plate_number} is in maintenance and cannot take deliveries`);
     }
+  }
 
-    return this.deliveryRepo.getDeliveryById(id)!;
+  private newTrackingCode(): string {
+    for (;;) {
+      const code = `LR-TLN-${crypto.randomInt(100000, 1000000)}`;
+      if (!this.deliveryRepo.getDeliveryByTrackingCode(code)) return code;
+    }
   }
 }

@@ -13,6 +13,17 @@ export interface AppContext {
   db: DatabaseSync;
 }
 
+/** Finds the built client: CLIENT_DIST, then next to the sources, then next to the compiled output. */
+function findClientDist(): string | null {
+  const here = import.meta.dirname;
+  const candidates = [
+    process.env.CLIENT_DIST ? path.resolve(process.env.CLIENT_DIST) : '',
+    path.resolve(here, '../../client/dist'),
+    path.resolve(here, '../../../../client/dist'),
+  ].filter(Boolean);
+  return candidates.find((dir) => fs.existsSync(path.join(dir, 'index.html'))) ?? null;
+}
+
 export function createApp(dbPath?: string, shouldSeed = true): AppContext {
   const app = express();
   app.use(cors());
@@ -24,23 +35,23 @@ export function createApp(dbPath?: string, shouldSeed = true): AppContext {
     seedDatabase(db);
   }
 
-  // Mount API router
   app.use('/api', createApiRouter(db));
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ success: false, error: 'Not found' });
+  });
 
-  // Serve static client bundle in production if built
-  const clientDist = path.resolve(process.cwd(), '../client/dist');
-  if (fs.existsSync(clientDist)) {
+  const clientDist = findClientDist();
+  if (clientDist) {
     app.use(express.static(clientDist));
-    app.get('*', (req, res, next) => {
-      if (req.path.startsWith('/api')) return next();
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(clientDist, 'index.html'));
     });
   }
 
-  // Error handling middleware
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error('Unhandled server error:', err);
-    res.status(500).json({ success: false, error: err.message || 'Internal Server Error' });
+    const status = err.status === 400 || err.type === 'entity.parse.failed' ? 400 : 500;
+    if (status === 500) console.error('Unhandled server error:', err);
+    res.status(status).json({ success: false, error: status === 400 ? 'Invalid JSON body' : 'Internal Server Error' });
   });
 
   return { app, db };
