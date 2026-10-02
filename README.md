@@ -135,6 +135,15 @@ docker compose up --build
 
 ---
 
+### Delivery location input
+
+`POST /api/deliveries` requires a non-empty string `destination_address` and numeric
+`dropoff_lat` / `dropoff_lng`. Latitude must be within -90..90 and longitude within
+-180..180, inclusive. Coordinates must be finite numbers; zero is valid. Numeric
+strings and explicit `null` coordinates are rejected with HTTP 400 before storage.
+Optional `pickup_lat` and `pickup_lng` default independently to 59.4335 and 24.745
+only when omitted. Address whitespace is trimmed before saving.
+
 ## 📐 Architecture Decision Records (ADRs)
 
 Detailed rationale on technical choices:

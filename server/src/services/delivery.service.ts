@@ -20,8 +20,19 @@ export class DeliveryService {
   }
 
   createDelivery(dto: CreateDeliveryDto): Delivery {
-    if (!dto.destination_address || !dto.dropoff_lat || !dto.dropoff_lng) {
-      throw new Error('Destination address, latitude, and longitude are required');
+    if (!dto || typeof dto !== 'object' || Array.isArray(dto)) {
+      throw new Error('Delivery must be an object');
+    }
+    if (typeof dto.destination_address !== 'string' || !dto.destination_address.trim()) {
+      throw new Error('Destination address must be a non-empty string');
+    }
+    for (const field of ['pickup_lat', 'pickup_lng', 'dropoff_lat', 'dropoff_lng'] as const) {
+      const value = dto[field];
+      if (field.startsWith('pickup') && value === undefined) continue;
+      const limit = field.endsWith('lat') ? 90 : 180;
+      if (typeof value !== 'number' || !Number.isFinite(value) || value < -limit || value > limit) {
+        throw new Error(`${field} must be a finite number between ${-limit} and ${limit}`);
+      }
     }
 
     // Default pickup location: Vabaduse Hub Tallinn
@@ -45,7 +56,7 @@ export class DeliveryService {
       pickup_lng: pickupLng,
       dropoff_lat: dropoffLat,
       dropoff_lng: dropoffLng,
-      destination_address: dto.destination_address,
+      destination_address: dto.destination_address.trim(),
       distance_km: distanceKm,
       eta_minutes: etaMinutes,
       vehicle_id: dto.vehicle_id ?? null,
