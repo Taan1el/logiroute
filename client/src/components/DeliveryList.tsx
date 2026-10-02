@@ -18,6 +18,28 @@ const ACTION_LABEL: Partial<Record<DeliveryStatus, string>> = {
   completed: 'Complete delivery',
 };
 
+const AssignControl: React.FC<{ vehicles: Vehicle[]; onAssign: (vehicleId: string) => void }> = ({ vehicles, onAssign }) => {
+  const [choice, setChoice] = useState('');
+  return (
+    <div className="assign">
+      <label className="field-inline">
+        <span>Assign vehicle</span>
+        <select value={choice} onChange={(e) => setChoice(e.target.value)}>
+          <option value="">{vehicles.length ? 'Choose idle vehicle' : 'No idle vehicle'}</option>
+          {vehicles.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.plate_number} ({v.model})
+            </option>
+          ))}
+        </select>
+      </label>
+      <button type="button" className="btn btn-secondary" disabled={!choice} onClick={() => onAssign(choice)}>
+        Dispatch
+      </button>
+    </div>
+  );
+};
+
 export const DeliveryList: React.FC<DeliveryListProps> = ({ deliveries, vehicles, onUpdateStatus, onAssignVehicle }) => {
   const [filter, setFilter] = useState<Filter>('open');
   const open = deliveries.filter((d) => d.status !== 'completed');
@@ -33,7 +55,8 @@ export const DeliveryList: React.FC<DeliveryListProps> = ({ deliveries, vehicles
 
   return (
     <>
-      <div className="segmented" aria-label="Filter deliveries">
+      <fieldset className="segmented">
+        <legend className="sr-only">Filter deliveries</legend>
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -45,7 +68,7 @@ export const DeliveryList: React.FC<DeliveryListProps> = ({ deliveries, vehicles
             {tab.label}
           </button>
         ))}
-      </div>
+      </fieldset>
       <ul className="rows">
         {shown.map((d) => {
           const next = nextDeliveryStatus(d.status);
@@ -62,24 +85,7 @@ export const DeliveryList: React.FC<DeliveryListProps> = ({ deliveries, vehicles
                 {d.status !== 'completed' && d.status !== 'arrived_at_hub' ? ` / ETA ${d.eta_minutes} min` : ''}
               </div>
               <div className="delivery-action">
-                {d.status === 'pending' && (
-                  <label className="field-inline">
-                    <span>Assign vehicle</span>
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        if (e.target.value) onAssignVehicle(d.id, e.target.value);
-                      }}
-                    >
-                      <option value="">{assignable.length ? 'Choose idle vehicle' : 'No idle vehicle'}</option>
-                      {assignable.map((v) => (
-                        <option key={v.id} value={v.id}>
-                          {v.plate_number} ({v.model})
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
+                {d.status === 'pending' && <AssignControl vehicles={assignable} onAssign={(vehicleId) => onAssignVehicle(d.id, vehicleId)} />}
                 {next && action && d.status !== 'pending' && (
                   <button type="button" className="btn btn-secondary" onClick={() => onUpdateStatus(d.id, next)}>
                     {action}

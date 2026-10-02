@@ -639,6 +639,16 @@ ol {
   grid-row: 1 / span 3;
 }
 
+.assign {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.assign select {
+  min-width: 11rem;
+}
+
 .delivery-action:empty {
   display: none;
 }
@@ -803,7 +813,19 @@ input::placeholder {
 
 .segmented {
   display: inline-flex;
-  margin-bottom: 8px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .map-tools .segmented {
@@ -1087,4 +1109,10 @@ input::placeholder {
   .seg {
     transition: none;
   }
+}
+
+.delivery-action:has(.assign) {
+  grid-column: 1;
+  grid-row: auto;
+  margin-top: 8px;
 }

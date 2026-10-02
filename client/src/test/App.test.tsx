@@ -94,6 +94,7 @@ describe('dispatch console', () => {
     await ready();
     const [assign] = within(section('Deliveries')).getAllByLabelText('Assign vehicle');
     await user.selectOptions(assign, within(assign).getByRole('option', { name: /TLN-803/ }));
+    await user.click(within(section('Deliveries')).getAllByRole('button', { name: 'Dispatch' })[0]);
     expect(await screen.findByText(/dispatched with TLN-803/)).toBeInTheDocument();
     expect(await screen.findByText('3 en route')).toBeInTheDocument();
   });

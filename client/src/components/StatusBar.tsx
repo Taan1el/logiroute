@@ -19,12 +19,12 @@ export const StatusBar: React.FC<StatusBarProps> = ({ metrics, polling, interval
     <span className="mono">{`${metrics.completed_24h} completed in 24 h`}</span>
     <span className="mono">{pluralize(metrics.alerts_24h, 'alert') + ' in 24 h'}</span>
     <span className="mono battery-avg">{`Battery avg ${metrics.avg_battery_percent}%`}</span>
-    <output className={loadError ? 'sync sync-bad' : 'sync'}>
+    <span className={loadError ? 'sync sync-bad' : 'sync'}>
       {loadError
         ? 'Cannot reach the API'
         : polling
           ? `Refreshing every ${intervalSeconds} s${lastUpdated ? `, last ${lastUpdated}` : ''}`
           : 'Updates paused'}
-    </output>
+    </span>
   </footer>
 );

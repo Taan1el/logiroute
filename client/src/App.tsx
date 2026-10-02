@@ -200,14 +200,15 @@ export const App: React.FC = () => {
                 <input id="en-route-only" type="checkbox" checked={enRouteOnly} onChange={(e) => setEnRouteOnly(e.target.checked)} />
                 <label htmlFor="en-route-only">En-route vehicles only</label>
               </span>
-              <div className="segmented" aria-label="Route view">
+              <fieldset className="segmented">
+                <legend className="sr-only">Route view</legend>
                 <button type="button" className={view === 'map' ? 'seg seg-on' : 'seg'} aria-pressed={view === 'map'} onClick={() => setView('map')}>
                   Map
                 </button>
                 <button type="button" className={view === 'table' ? 'seg seg-on' : 'seg'} aria-pressed={view === 'table'} onClick={() => setView('table')}>
                   Table
                 </button>
-              </div>
+              </fieldset>
             </div>
           </div>
           <div
