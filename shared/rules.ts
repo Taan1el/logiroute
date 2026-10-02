@@ -59,6 +59,31 @@ export function checkTransition(delivery: Pick<Delivery, 'status' | 'vehicle_id'
   return null;
 }
 
+/** A vehicle in maintenance cannot take deliveries. */
+export function checkAssignableVehicle(vehicle: Pick<Vehicle, 'plate_number' | 'status'>): string | null {
+  return vehicle.status === 'maintenance'
+    ? `Vehicle ${vehicle.plate_number} is in maintenance and cannot take deliveries`
+    : null;
+}
+
+/** Only pending deliveries can be given a vehicle. */
+export function checkAssignable(delivery: Pick<Delivery, 'status'>): string | null {
+  return delivery.status === 'pending'
+    ? null
+    : `Only pending deliveries can be assigned, this one is ${delivery.status}`;
+}
+
+/** A vehicle with dispatched or in-transit deliveries must stay en route. */
+export function checkVehicleStatusChange(
+  vehicle: Pick<Vehicle, 'plate_number'>,
+  to: string,
+  hasActiveDeliveries: boolean,
+): string | null {
+  return hasActiveDeliveries && to !== 'en_route'
+    ? `Vehicle ${vehicle.plate_number} has active deliveries and must stay en route`
+    : null;
+}
+
 export function initialEtaMinutes(distanceKm: number): number {
   return Math.max(5, Math.round((distanceKm / PLANNING_SPEED_KMH) * 60) + DISPATCH_BUFFER_MINUTES);
 }

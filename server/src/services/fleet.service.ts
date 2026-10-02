@@ -2,7 +2,7 @@ import { VehicleRepository } from '../repositories/vehicle.repository.js';
 import { GeofenceRepository } from '../repositories/geofence.repository.js';
 import { AlertRepository } from '../repositories/alert.repository.js';
 import { DeliveryRepository } from '../repositories/delivery.repository.js';
-import { computeMetrics, DAY_MS, validateGeofenceInput } from '../../../shared/rules.js';
+import { checkVehicleStatusChange, computeMetrics, DAY_MS, validateGeofenceInput } from '../../../shared/rules.js';
 import { Geofence, Vehicle, VehicleStatus, AlertEvent, FleetMetrics } from '../../../shared/types.js';
 
 export class FleetService {
@@ -29,8 +29,9 @@ export class FleetService {
     const hasActive = this.deliveryRepo
       .listDeliveries()
       .some((d) => d.vehicle_id === id && (d.status === 'dispatched' || d.status === 'in_transit'));
-    if (hasActive && status !== 'en_route') {
-      throw new Error(`Vehicle ${vehicle.plate_number} has active deliveries and must stay en route`);
+    const blocked = checkVehicleStatusChange(vehicle, status, hasActive);
+    if (blocked) {
+      throw new Error(blocked);
     }
     this.vehicleRepo.updateStatus(id, status);
     return this.vehicleRepo.getVehicleById(id)!;

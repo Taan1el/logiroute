@@ -3,6 +3,8 @@ import { DeliveryRepository } from '../repositories/delivery.repository.js';
 import { VehicleRepository } from '../repositories/vehicle.repository.js';
 import { GeoService } from './geo.service.js';
 import {
+  checkAssignable,
+  checkAssignableVehicle,
   checkTransition,
   DEFAULT_PICKUP,
   initialEtaMinutes,
@@ -96,8 +98,9 @@ export class DeliveryService {
     if (!delivery) {
       throw new Error(`Delivery not found: ${id}`);
     }
-    if (delivery.status !== 'pending') {
-      throw new Error(`Only pending deliveries can be assigned, this one is ${delivery.status}`);
+    const notAssignable = checkAssignable(delivery);
+    if (notAssignable) {
+      throw new Error(notAssignable);
     }
     this.requireAssignableVehicle(vehicleId);
 
@@ -115,8 +118,9 @@ export class DeliveryService {
     if (!vehicle) {
       throw new Error(`Vehicle not found: ${vehicleId}`);
     }
-    if (vehicle.status === 'maintenance') {
-      throw new Error(`Vehicle ${vehicle.plate_number} is in maintenance and cannot take deliveries`);
+    const blocked = checkAssignableVehicle(vehicle);
+    if (blocked) {
+      throw new Error(blocked);
     }
   }
 

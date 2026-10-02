@@ -87,3 +87,29 @@ export function buildFleetRoutes(vehicles: Vehicle[], deliveries: Delivery[]): F
   }
   return routes;
 }
+
+/** Share of the remaining distance a simulated step covers. */
+export const SIMULATION_STEP_FRACTION = 0.2;
+export const SIMULATION_SPEED_KMH = 32;
+
+/**
+ * Next position for the "advance fleet" simulation: an en-route vehicle with an
+ * active delivery moves a fixed share of the way to the nearest planned stop
+ * and uses one percent of battery. A vehicle without a stop stays where it is.
+ */
+export function simulateStep(
+  vehicle: Vehicle,
+  stops: Pick<PlannedStop, 'lat' | 'lng'>[],
+): { lat: number; lng: number; speed_kmh: number; battery_percent: number } {
+  const target = stops[0];
+  const battery = Math.max(5, vehicle.battery_percent - 1);
+  if (!target) {
+    return { lat: vehicle.current_lat, lng: vehicle.current_lng, speed_kmh: 0, battery_percent: battery };
+  }
+  return {
+    lat: vehicle.current_lat + (target.lat - vehicle.current_lat) * SIMULATION_STEP_FRACTION,
+    lng: vehicle.current_lng + (target.lng - vehicle.current_lng) * SIMULATION_STEP_FRACTION,
+    speed_kmh: SIMULATION_SPEED_KMH,
+    battery_percent: battery,
+  };
+}

@@ -7,13 +7,16 @@ import {
   liveEtaMinutes,
   nextDeliveryStatus,
   pluralize,
+  checkAssignable,
+  checkAssignableVehicle,
+  checkVehicleStatusChange,
   progressDeliveries,
   validateDeliveryInput,
   validateGeofenceInput,
   validateTelemetryInput,
 } from '../../shared/rules.js';
 import { haversineDistanceKm } from '../../shared/geo.js';
-import { buildFleetRoutes, planRoute } from '../../shared/route.js';
+import { buildFleetRoutes, planRoute, simulateStep } from '../../shared/route.js';
 import type { AlertEvent, Delivery, Geofence, Vehicle } from '../../shared/types.js';
 
 const vehicle: Vehicle = {
@@ -197,5 +200,28 @@ describe('pluralize', () => {
     expect(pluralize(1, 'stop')).toBe('1 stop');
     expect(pluralize(2, 'vehicle')).toBe('2 vehicles');
     expect(pluralize(2, 'delivery', 'deliveries')).toBe('2 deliveries');
+  });
+});
+
+describe('simulation step and assignment checks', () => {
+  it('moves a fifth of the way to the nearest stop and uses one percent of battery', () => {
+    const next = simulateStep({ ...vehicle, current_lat: 59.4, current_lng: 24.7, battery_percent: 50 }, [{ lat: 59.5, lng: 24.9 }]);
+    expect(next.lat).toBeCloseTo(59.42, 5);
+    expect(next.lng).toBeCloseTo(24.74, 5);
+    expect(next).toMatchObject({ speed_kmh: 32, battery_percent: 49 });
+  });
+
+  it('keeps a vehicle without stops in place and never drains below 5 percent', () => {
+    const next = simulateStep({ ...vehicle, battery_percent: 5 }, []);
+    expect(next).toMatchObject({ lat: vehicle.current_lat, lng: vehicle.current_lng, speed_kmh: 0, battery_percent: 5 });
+  });
+
+  it('blocks maintenance vehicles, non-pending deliveries and status changes with active work', () => {
+    expect(checkAssignableVehicle({ plate_number: 'TLN-1', status: 'maintenance' })).toMatch(/maintenance/);
+    expect(checkAssignableVehicle({ plate_number: 'TLN-1', status: 'idle' })).toBeNull();
+    expect(checkAssignable({ status: 'pending' })).toBeNull();
+    expect(checkAssignable({ status: 'completed' })).toMatch(/completed/);
+    expect(checkVehicleStatusChange({ plate_number: 'TLN-1' }, 'idle', true)).toMatch(/must stay en route/);
+    expect(checkVehicleStatusChange({ plate_number: 'TLN-1' }, 'idle', false)).toBeNull();
   });
 });
