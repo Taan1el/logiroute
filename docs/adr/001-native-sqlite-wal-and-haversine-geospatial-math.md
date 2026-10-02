@@ -1,28 +1,19 @@
-# ADR 001: Native SQLite WAL and Haversine Geospatial Mathematics
+# ADR 001: Native SQLite in WAL mode and Haversine distances
 
 ## Status
 Accepted
 
 ## Context
-Fleet logistics systems processing vehicle coordinates and geofence boundary crosses frequently require geospatial queries. In enterprise architectures, teams often introduce PostGIS or external spatial GIS engines, introducing substantial container footprint, network overhead, and complex local developer setup. 
-
-For the Tallinn Urban Logistics Corridor platform, we required:
-1. Zero-dependency local developer execution (`npm run dev` out of the box without requiring Docker daemons or external spatial databases).
-2. High-throughput GPS telemetry ingestion and audit logging with sub-millisecond ACID transactions.
-3. Microsecond mathematical computation of Great-Circle distances, circular geofence containment, and azimuth headings between coordinates.
+The console needs to store vehicles, deliveries, geofences, alerts and position pings, and to answer two geometric questions: how far apart are two points, and is a vehicle inside a circular zone. A spatial database would add a service to run for a fleet of a few vehicles.
 
 ## Decision
-1. **Node.js 24 Native `node:sqlite` (`DatabaseSync`)**:
-   - Utilize Node.js's built-in SQLite driver in WAL (Write-Ahead Logging) mode.
-   - Eliminates all native C++ build tools (`node-gyp`, Python, MSBuild) and external Docker database dependencies.
-   - Enforces relational foreign keys, cascade deletes, and indexed spatial queries.
-
-2. **In-Memory Haversine & Azimuth Engine (`GeoService`)**:
-   - Compute Great-Circle arc distances via spherical trigonometric Haversine formula ($R = 6371\text{ km}$).
-   - Fast boundary containment checks: $\text{distance}(P_{\text{vehicle}}, P_{\text{center}}) \le r_{\text{geofence}}$.
-   - Compute true compass bearing azimuth (0..360°) via 2-argument arctangent ($\text{atan2}$).
+1. Use the `node:sqlite` module that ships with Node.js (`DatabaseSync`) with `PRAGMA journal_mode = WAL`, foreign keys on and a 5 second busy timeout. There is no native module to compile and no database server to start. The file path comes from `DATABASE_URL` and the `:memory:` path is used in tests.
+2. Compute distances with the Haversine formula on a sphere of radius 6371 km. Distances are rounded to 10 m, so a geofence check compares whole metres. Headings use the initial bearing from `atan2`.
+3. Keep this math in `shared/geo.ts` as pure functions so the server and the browser demo run the same code.
 
 ## Consequences
-- **Positive**: Sub-millisecond queries, zero native compilation failures on developer machines, zero external database setup.
-- **Positive**: Comprehensive unit test isolation using in-memory `:memory:` databases with instant teardown.
-- **Trade-off**: Complex multi-polygon GIS shapes (e.g. GeoJSON multipolygons) require custom point-in-polygon ray casting if expanded beyond circular perimeters.
+- Setup is `npm install` and `npm run dev`; tests run against `:memory:` databases.
+- Haversine on a sphere differs from true ellipsoidal distance by a fraction of a percent, which does not matter at city scale.
+- Only circular geofences are supported. Polygons would need point-in-polygon tests.
+- `DatabaseSync` blocks the event loop while a statement runs. That is fine for one dispatcher and a handful of vehicles, and would need a different driver for heavy ingest.
+- Multi-step operations such as assigning a vehicle run as separate statements without a transaction.
