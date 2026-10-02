@@ -1,0 +1,27 @@
+:root {
+  --paper: #e8ede4;        /* page background, tinted sage */
+  --surface: #f7f9f4;      /* header, toolbars, inputs */
+  --ground: #dbe3d4;       /* flat ground of the route map */
+  --ink: #1a2416;          /* primary text */
+  --ink-2: #434e3d;        /* secondary text */
+  --ink-3: #566250;        /* tertiary text, placeholders (4.9:1 on the map ground) */
+  --rule: #c5cfbc;         /* dividers, meter tracks */
+  --rule-strong: #7f8d76;  /* input and button borders (3.3:1 on surface) */
+  --accent: #46720c;       /* route green, adjusted from #4d7c0f for 4.8:1 text on paper */
+  --accent-ink: #ffffff;   /* text on accent fills */
+  /* status colors encode status only: dots, labels and meter fills */
+  --ok: #1f6f43;
+  --warn: #8a5300;
+  --bad: #b3261e;
+  --radius: 6px;
+  --page-pad: 1.5rem;
+  --font-heading: "Familjen Grotesk Variable", "Familjen Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Wix Madefor Text Variable", "Wix Madefor Text", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Noto Sans Mono Variable", "Noto Sans Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --page-pad: 1rem;
+  }
+}
