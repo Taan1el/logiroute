@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 
 - Automated accessibility checks (axe, WCAG 2 A and AA rules) for the map view, the table view and the new delivery dialog. The checks found no violations, so no UI changes were needed.
+- A test that checks every sideways scroll area (route map and stops table) is a named region reachable by keyboard, so the fix cannot regress unnoticed.
 
 ## [1.0.0] - 2026-10-02
 
