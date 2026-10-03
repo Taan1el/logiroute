@@ -116,7 +116,9 @@ All responses are `{ success, data }` or `{ success: false, error }`.
 npm test
 ```
 
-104 server tests cover the routes, validation errors, status transitions, alert rules, metrics and the route heuristic (including a case where it is not optimal) using in-memory SQLite. 29 client tests cover the console with React Testing Library against a `fetch` stub, the demo backend, and the demo bar. Timers are faked, so the suites do not sleep. CI runs lint, tests, both builds and a Docker build on Node 22 and 24.
+104 server tests cover the routes, validation errors, status transitions, alert rules, metrics and the route heuristic (including a case where it is not optimal) using in-memory SQLite. 32 client tests cover the console with React Testing Library against a `fetch` stub, the demo backend, and the demo bar. Timers are faked, so the suites do not sleep. CI runs lint, tests, both builds and a Docker build on Node 22 and 24.
+
+The client suite includes automated accessibility checks (axe, WCAG 2 A and AA rules) for the map view, the table view and the new delivery dialog. Color contrast is checked outside jsdom, because jsdom does not compute colors.
 
 ## Deployment
 
